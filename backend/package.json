@@ -1,0 +1,29 @@
+{
+    "name": "token-voting-backend",
+    "version": "1.0.0",
+    "type": "module",
+    "main": "src/server.js",
+    "scripts": {
+        "start": "node src/server.js",
+        "dev": "nodemon src/server.js",
+        "download:program": "node src/scripts/downloadProgram.js",
+        "deploy:programs": "node src/scripts/deployPrograms.js",
+        "start:validator": "node src/scripts/runValidator.js",
+        "init:localnet": "node src/scripts/initializeLocalnet.js"
+    },
+    "dependencies": {
+        "@metaplex-foundation/js": "0.19.4",
+        "@metaplex-foundation/mpl-token-metadata": "^2.12.0",
+        "@solana-developers/helpers": "^1.0.0",
+        "@solana/spl-token": "^0.3.8",
+        "@solana/web3.js": "^1.87.6",
+        "bs58": "^6.0.0",
+        "cors": "^2.8.5",
+        "dotenv": "^16.0.3",
+        "express": "^4.18.2",
+        "mongoose": "^7.0.3"
+    },
+    "devDependencies": {
+        "nodemon": "^2.0.22"
+    }
+}

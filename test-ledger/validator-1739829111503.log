@@ -1,0 +1,25 @@
+[0m[38;5;8m[[0m2025-02-17T21:51:51.508576000Z [0m[32mINFO [0m solana_test_validator[0m[38;5;8m][0m solana-validator 1.17.9 (src:daf37308; feat:1428472342, client:SolanaLabs)
+[0m[38;5;8m[[0m2025-02-17T21:51:51.508627000Z [0m[32mINFO [0m solana_test_validator[0m[38;5;8m][0m Starting validator with: ArgsOs {
+        inner: [
+            "solana-test-validator",
+            "--reset",
+            "--clone",
+            "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s",
+            "--url",
+            "https://api.devnet.solana.com",
+            "--quiet",
+        ],
+    }
+[0m[38;5;8m[[0m2025-02-17T21:51:51.510481000Z [0m[33mWARN [0m solana_perf[0m[38;5;8m][0m CUDA is disabled
+[0m[38;5;8m[[0m2025-02-17T21:51:51.542227000Z [0m[32mINFO [0m solana_faucet::faucet[0m[38;5;8m][0m Faucet started. Listening on: 0.0.0.0:9900
+[0m[38;5;8m[[0m2025-02-17T21:51:51.542245000Z [0m[32mINFO [0m solana_faucet::faucet[0m[38;5;8m][0m Faucet account address: 6XFaw5qadHbi2rx8wCUDuYXqmspoPgmgxvUnyRMcNfrA
+[0m[38;5;8m[[0m2025-02-17T21:51:51.545245000Z [0m[32mINFO [0m solana_test_validator[0m[38;5;8m][0m Fetching [metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s] over RPC...
+[0m[38;5;8m[[0m2025-02-17T21:51:51.549041000Z [0m[32mINFO [0m solana_validator::admin_rpc_service[0m[38;5;8m][0m started admin rpc service!
+[0m[38;5;8m[[0m2025-02-17T21:51:52.182927000Z [0m[32mINFO [0m solana_test_validator[0m[38;5;8m][0m Feature for HCnE3xQoZtDz9dSVm3jKwJXioTb6zMRbgwCmGg3PHHk8 deactivated
+[0m[38;5;8m[[0m2025-02-17T21:51:52.198462000Z [0m[32mINFO [0m solana_ledger::blockstore[0m[38;5;8m][0m Maximum open file descriptors: 1000000
+[0m[38;5;8m[[0m2025-02-17T21:51:52.199264000Z [0m[32mINFO [0m solana_ledger::blockstore[0m[38;5;8m][0m Opening database at "test-ledger/rocksdb"
+[0m[38;5;8m[[0m2025-02-17T21:51:52.202743000Z [0m[33mWARN [0m solana_ledger::blockstore_db[0m[38;5;8m][0m Unable to detect Rocks columns: Error { message: "IO error: No such file or directory: While opening a file for sequentially reading: test-ledger/rocksdb/CURRENT: No such file or directory" }
+[0m[38;5;8m[[0m2025-02-17T21:51:52.283677000Z [0m[32mINFO [0m solana_ledger::blockstore[0m[38;5;8m][0m "test-ledger/rocksdb" open took 84ms
+[0m[38;5;8m[[0m2025-02-17T21:51:52.299068000Z [0m[32mINFO [0m solana_metrics::metrics[0m[38;5;8m][0m metrics disabled: environment variable not found
+[0m[38;5;8m[[0m2025-02-17T21:51:52.299113000Z [0m[32mINFO [0m solana_metrics::metrics[0m[38;5;8m][0m datapoint: shred_insert_is_full total_time_ms=0i slot=0i last_index=3i num_repaired=0i num_recovered=0i
+[0m[38;5;8m[[0m2025-02-17T21:51:52.366070000Z [0m[32mINFO [0m solana_accounts_db::hardened_unpack[0m[38;5;8m][0m Extracting "test-ledger/genesis.tar.bz2"...

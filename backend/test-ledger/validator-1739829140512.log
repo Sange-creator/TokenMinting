@@ -1,0 +1,19 @@
+[0m[38;5;8m[[0m2025-02-17T21:52:20.521352000Z [0m[32mINFO [0m solana_test_validator[0m[38;5;8m][0m solana-validator 1.17.9 (src:daf37308; feat:1428472342, client:SolanaLabs)
+[0m[38;5;8m[[0m2025-02-17T21:52:20.521408000Z [0m[32mINFO [0m solana_test_validator[0m[38;5;8m][0m Starting validator with: ArgsOs {
+        inner: [
+            "solana-test-validator",
+            "--reset",
+        ],
+    }
+[0m[38;5;8m[[0m2025-02-17T21:52:20.524212000Z [0m[33mWARN [0m solana_perf[0m[38;5;8m][0m CUDA is disabled
+[0m[38;5;8m[[0m2025-02-17T21:52:20.536729000Z [0m[32mINFO [0m solana_faucet::faucet[0m[38;5;8m][0m Faucet started. Listening on: 0.0.0.0:9900
+[0m[38;5;8m[[0m2025-02-17T21:52:20.536755000Z [0m[32mINFO [0m solana_faucet::faucet[0m[38;5;8m][0m Faucet account address: s3q58ijmeM4PHu4zwsHJyfuUdsCwx71DKqzMoSzpVN3
+[0m[38;5;8m[[0m2025-02-17T21:52:20.541452000Z [0m[32mINFO [0m solana_validator::admin_rpc_service[0m[38;5;8m][0m started admin rpc service!
+[0m[38;5;8m[[0m2025-02-17T21:52:20.556666000Z [0m[32mINFO [0m solana_test_validator[0m[38;5;8m][0m Feature for HCnE3xQoZtDz9dSVm3jKwJXioTb6zMRbgwCmGg3PHHk8 deactivated
+[0m[38;5;8m[[0m2025-02-17T21:52:20.565999000Z [0m[32mINFO [0m solana_ledger::blockstore[0m[38;5;8m][0m Maximum open file descriptors: 1048575
+[0m[38;5;8m[[0m2025-02-17T21:52:20.566619000Z [0m[32mINFO [0m solana_ledger::blockstore[0m[38;5;8m][0m Opening database at "test-ledger/rocksdb"
+[0m[38;5;8m[[0m2025-02-17T21:52:20.572245000Z [0m[33mWARN [0m solana_ledger::blockstore_db[0m[38;5;8m][0m Unable to detect Rocks columns: Error { message: "IO error: No such file or directory: While opening a file for sequentially reading: test-ledger/rocksdb/CURRENT: No such file or directory" }
+[0m[38;5;8m[[0m2025-02-17T21:52:20.688130000Z [0m[32mINFO [0m solana_ledger::blockstore[0m[38;5;8m][0m "test-ledger/rocksdb" open took 121ms
+[0m[38;5;8m[[0m2025-02-17T21:52:20.714042000Z [0m[32mINFO [0m solana_metrics::metrics[0m[38;5;8m][0m metrics disabled: environment variable not found
+[0m[38;5;8m[[0m2025-02-17T21:52:20.714137000Z [0m[32mINFO [0m solana_metrics::metrics[0m[38;5;8m][0m datapoint: shred_insert_is_full total_time_ms=0i slot=0i last_index=3i num_repaired=0i num_recovered=0i
+[0m[38;5;8m[[0m2025-02-17T21:52:20.820844000Z [0m[32mINFO [0m solana_accounts_db::hardened_unpack[0m[38;5;8m][0m Extracting "test-ledger/genesis.tar.bz2"...

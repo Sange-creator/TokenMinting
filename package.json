@@ -1,0 +1,14 @@
+{
+  "name": "token-voting-system",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "backend:dev": "npm run dev --prefix backend",
+    "backend:start": "npm run start --prefix backend",
+    "deploy:programs": "npm run deploy:programs --prefix backend"
+  }
+} 
