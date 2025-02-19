@@ -1,6 +1,29 @@
 import mongoose from 'mongoose';
 
 const voterSchema = new mongoose.Schema({
+  publicKey: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true
+  },
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  hasReceivedToken: {
+    type: Boolean,
+    default: false
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  },
   ATA: {
     type: String,
     required: true,
@@ -9,15 +32,6 @@ const voterSchema = new mongoose.Schema({
   tokensReceived: {
     type: Number,
     default: 0
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  fullName: {
-    type: String,
-    required: true,
-    trim: true,
   },
   dateOfBirth: {
     type: Date,
@@ -130,4 +144,12 @@ const voterSchema = new mongoose.Schema({
   },
 });
 
-export default mongoose.model('Voter', voterSchema); 
+// Update the updatedAt timestamp before saving
+voterSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
+});
+
+const Voter = mongoose.model('Voter', voterSchema);
+
+export default Voter; 
