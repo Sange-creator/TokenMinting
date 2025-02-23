@@ -1,7 +1,7 @@
 import { Keypair } from '@solana/web3.js';
 import bs58 from 'bs58';
 
-// Generate a new keypair
+
 const keypair = Keypair.generate();
 
 // Get the secret key in different formats
