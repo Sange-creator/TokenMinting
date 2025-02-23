@@ -17,15 +17,23 @@ jobs:
       packages: write
     
     steps:
+    - name: Clean runner workspace
+      run: |
+        echo "Cleaning up runner workspace..."
+        rm -f /home/ubuntu/actions-runner/run.sh || true
+        sudo rm -rf "$GITHUB_WORKSPACE/*" || true
+        
     - name: Configure Runner Environment
       run: |
         echo "Setting up runner environment..."
         echo "Runner IP: $(hostname -I | awk '{print $1}')"
         echo "Runner workspace: $GITHUB_WORKSPACE"
+        whoami
         
     - uses: actions/checkout@v4
       with:
-        clean: false  # Prevents cleaning existing files
+        clean: true
+        fetch-depth: 1
         
     - name: Set up Docker permissions
       run: |
@@ -39,6 +47,9 @@ jobs:
         SOLANA_RPC_URL: https://api.devnet.solana.com
         SECRET_KEY: ${{ secrets.PRIVATE_KEY }}
       run: |
+        # Ensure we're in a clean state
+        sudo docker system prune -af --volumes || true
+        
         # Navigate to backend directory
         cd backend
         
