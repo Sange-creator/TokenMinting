@@ -19,6 +19,12 @@ jobs:
         chmod 600 ~/.ssh/tokenminting.pem
         ssh-keyscan -H ${{ secrets.AWS_EC2_HOST }} >> ~/.ssh/known_hosts
 
+    - name: Install Docker Compose
+      run: |
+        sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
+
     - name: Login to Docker Hub
       uses: docker/login-action@v2
       with:
@@ -28,9 +34,9 @@ jobs:
     - name: Build and Push Docker Images
       run: |
         cd backend
-        docker-compose build
-        docker tag tokenminting-backend ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
-        docker push ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
+        sudo docker-compose build
+        sudo docker tag tokenminting-backend ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
+        sudo docker push ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
 
     - name: Deploy to EC2
       env:
@@ -48,7 +54,7 @@ jobs:
             sudo systemctl enable docker
           fi
 
-          # Install Docker Compose if notpresent
+          # Install Docker Compose if not present
           if ! [ -x "$(command -v docker-compose)" ]; then
             sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
             sudo chmod +x /usr/local/bin/docker-compose
@@ -86,16 +92,16 @@ jobs:
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
           # Stop and remove existing containers
-          docker-compose down --remove-orphans || true
+          sudo docker-compose down --remove-orphans || true
           
           # Clean up old images
-          docker system prune -af --volumes || true
+          sudo docker system prune -af --volumes || true
 
           # Pull and deploy
-          docker-compose pull
-          docker-compose up -d
+          sudo docker-compose pull
+          sudo docker-compose up -d
 
           # Verify deployment
-          docker ps
+          sudo docker ps
           echo "Deployment completed successfully!"
         EOF 
