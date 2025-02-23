@@ -33,19 +33,18 @@ jobs:
 
     - name: Build and Push Docker Images
       run: |
-        # Debug: Show current directory and contents
-        pwd
-        ls -la
-        
         # Navigate to backend directory
         cd backend
         
-        # Debug: Show backend directory contents
-        ls -la
-        
+        # Build images
         sudo docker-compose build
-        sudo docker tag tokenminting_backend_1 ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
-        sudo docker tag tokenminting_frontend_1 ${{ secrets.DOCKER_USERNAME }}/tokenminting-frontend:latest
+        
+        # List images to verify names
+        sudo docker images
+        
+        # Tag and push images
+        sudo docker tag backend-backend ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
+        sudo docker tag backend-frontend ${{ secrets.DOCKER_USERNAME }}/tokenminting-frontend:latest
         sudo docker push ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
         sudo docker push ${{ secrets.DOCKER_USERNAME }}/tokenminting-frontend:latest
 
