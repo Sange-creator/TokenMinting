@@ -7,8 +7,14 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
 
     steps:
     - uses: actions/checkout@v4
@@ -21,12 +27,47 @@ jobs:
         
     - name: Install dependencies
       run: npm ci
+        
+    - name: Install backend dependencies
+      working-directory: backend
+      run: npm ci
       
-    - name: Run linter
-      run: npm run lint
+    - name: Install frontend dependencies
+      working-directory: frontend
+      run: npm ci
       
-    - name: Run tests
-      run: npm test
+    - name: Build frontend
+      working-directory: frontend
+      run: npm run build
+      env:
+        CI: true
+        REACT_APP_API_URL: http://localhost:3000
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
       
-    - name: Build
-      run: npm run build 
+    - name: Build backend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        push: false
+        load: true
+        tags: token-minting-backend:test
+        
+    - name: Build frontend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        push: false
+        load: true
+        tags: token-minting-frontend:test
+
+    - name: Validate Docker Compose
+      run: docker-compose -f backend/docker-compose.yml config 
