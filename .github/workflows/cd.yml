@@ -10,31 +10,32 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # Using self-hosted runner on Ubuntu instance
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     
     steps:
     - uses: actions/checkout@v4
-
-    - name: Deploy to Ubuntu Instance
+    
+    - name: Deploy with Docker
       env:
         MONGODB_URI: ${{ secrets.MONGODB_URI }}
         SOLANA_NETWORK: devnet
         SOLANA_RPC_URL: https://api.devnet.solana.com
         SECRET_KEY: ${{ secrets.PRIVATE_KEY }}
       run: |
-        # Stop existing containers
-        docker-compose -f backend/docker-compose.yml down
-
-        # Remove old images
-        docker system prune -f
-
-        # Build new images
-        docker-compose -f backend/docker-compose.yml build
-
-        # Start new containers
-        docker-compose -f backend/docker-compose.yml up -d
-
+        # Navigate to backend directory
+        cd backend
+        
+        # Stop and remove existing containers
+        docker-compose down
+        
+        # Remove unused images and clear cache
+        docker system prune -af --volumes
+        
+        # Build and start new containers
+        docker-compose build --no-cache
+        docker-compose up -d
+        
         # Verify deployment
         docker ps
         echo "Deployment completed successfully!" 
