@@ -1,76 +1,101 @@
-name: CD
+name: Deploy to AWS EC2
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types:
-      - completed
-    branches:
-      - main
+  push:
+    branches: [ main ]
 
 jobs:
   deploy:
-    runs-on: self-hosted
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    permissions:
-      contents: read
-      packages: write
+    runs-on: ubuntu-latest
     
     steps:
-    - name: Clean runner workspace
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH
       run: |
-        echo "Cleaning up runner workspace..."
-        rm -f /home/ubuntu/actions-runner/run.sh || true
-        sudo rm -rf "$GITHUB_WORKSPACE/*" || true
-        
-    - name: Configure Runner Environment
-      run: |
-        echo "Setting up runner environment..."
-        echo "Runner IP: $(hostname -I | awk '{print $1}')"
-        echo "Runner workspace: $GITHUB_WORKSPACE"
-        whoami
-        
-    - uses: actions/checkout@v4
+        mkdir -p ~/.ssh/
+        echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/tokenminting.pem
+        chmod 600 ~/.ssh/tokenminting.pem
+        ssh-keyscan -H ${{ secrets.AWS_EC2_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
       with:
-        clean: true
-        fetch-depth: 1
-        
-    - name: Set up Docker permissions
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and Push Docker Images
       run: |
-        sudo chown -R $USER:$USER $GITHUB_WORKSPACE
-        sudo chmod -R 777 $GITHUB_WORKSPACE
-    
-    - name: Handle Docker Operations
+        cd backend
+        docker-compose build
+        docker tag tokenminting-backend ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
+
+    - name: Deploy to EC2
       env:
         MONGODB_URI: ${{ secrets.MONGODB_URI }}
         SOLANA_NETWORK: devnet
         SOLANA_RPC_URL: https://api.devnet.solana.com
         SECRET_KEY: ${{ secrets.PRIVATE_KEY }}
       run: |
-        # Ensure we're in a clean state
-        sudo docker system prune -af --volumes || true
-        
-        # Navigate to backend directory
-        cd backend
-        
-        # Pull the latest images defined in docker-compose
-        sudo docker-compose pull || true
-        
-        # Stop and remove existing containers
-        sudo docker-compose down --remove-orphans
-        
-        # Remove old images
-        sudo docker image prune -f
-        
-        # Build fresh images
-        sudo docker-compose build --no-cache
-        
-        # Start new containers in detached mode
-        sudo docker-compose up -d
-        
-        # Wait for containers to be healthy
-        sleep 10
-        
-        # Verify deployment
-        sudo docker ps
-        echo "Deployment completed successfully!" 
+        ssh -i ~/.ssh/tokenminting.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.AWS_EC2_HOST }} << 'EOF'
+          # Install Docker if not present
+          if ! [ -x "$(command -v docker)" ]; then
+            sudo apt-get update
+            sudo apt-get install -y docker.io
+            sudo systemctl start docker
+            sudo systemctl enable docker
+          fi
+
+          # Install Docker Compose if not present
+          if ! [ -x "$(command -v docker-compose)" ]; then
+            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+
+          # Create app directory
+          mkdir -p ~/tokenminting
+          cd ~/tokenminting
+
+          # Create docker-compose.yml
+          cat > docker-compose.yml << 'INNER_EOF'
+          version: '3.8'
+          services:
+            backend:
+              image: ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
+              ports:
+                - "3000:3000"
+              environment:
+                - MONGODB_URI=${MONGODB_URI}
+                - SOLANA_NETWORK=${SOLANA_NETWORK}
+                - SOLANA_RPC_URL=${SOLANA_RPC_URL}
+                - SECRET_KEY=${SECRET_KEY}
+              restart: unless-stopped
+          INNER_EOF
+
+          # Create .env file
+          cat > .env << 'ENV_EOF'
+          MONGODB_URI=${MONGODB_URI}
+          SOLANA_NETWORK=${SOLANA_NETWORK}
+          SOLANA_RPC_URL=${SOLANA_RPC_URL}
+          SECRET_KEY=${SECRET_KEY}
+          ENV_EOF
+
+          # Login to Docker Hub
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+          # Stop and remove existing containers
+          docker-compose down --remove-orphans || true
+          
+          # Clean up old images
+          docker system prune -af --volumes || true
+
+          # Pull and deploy
+          docker-compose pull
+          docker-compose up -d
+
+          # Verify deployment
+          docker ps
+          echo "Deployment completed successfully!"
+        EOF 
