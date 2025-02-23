@@ -17,6 +17,12 @@ jobs:
       packages: write
     
     steps:
+    - name: Configure Runner Environment
+      run: |
+        echo "Setting up runner environment..."
+        echo "Runner IP: $(hostname -I | awk '{print $1}')"
+        echo "Runner workspace: $GITHUB_WORKSPACE"
+        
     - uses: actions/checkout@v4
       with:
         clean: false  # Prevents cleaning existing files
@@ -26,7 +32,7 @@ jobs:
         sudo chown -R $USER:$USER $GITHUB_WORKSPACE
         sudo chmod -R 777 $GITHUB_WORKSPACE
     
-    - name: Deploy with Docker
+    - name: Handle Docker Operations
       env:
         MONGODB_URI: ${{ secrets.MONGODB_URI }}
         SOLANA_NETWORK: devnet
@@ -36,15 +42,23 @@ jobs:
         # Navigate to backend directory
         cd backend
         
+        # Pull the latest images defined in docker-compose
+        sudo docker-compose pull || true
+        
         # Stop and remove existing containers
-        sudo docker-compose down || true
+        sudo docker-compose down --remove-orphans
         
-        # Remove unused images and clear cache (with error handling)
-        sudo docker system prune -af --volumes || true
+        # Remove old images
+        sudo docker image prune -f
         
-        # Build and start new containers
+        # Build fresh images
         sudo docker-compose build --no-cache
+        
+        # Start new containers in detached mode
         sudo docker-compose up -d
+        
+        # Wait for containers to be healthy
+        sleep 10
         
         # Verify deployment
         sudo docker ps
