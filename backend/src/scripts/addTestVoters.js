@@ -6,7 +6,6 @@ import crypto from 'crypto';
 
 async function addTestVoters() {
     try {
-        // Connect to MongoDB
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('Connected to MongoDB');
 
