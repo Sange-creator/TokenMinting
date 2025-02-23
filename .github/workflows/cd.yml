@@ -81,6 +81,11 @@ jobs:
                 - PORT=3001
                 - DANGEROUSLY_DISABLE_HOST_CHECK=true
               restart: unless-stopped
+              healthcheck:
+                test: ["CMD", "curl", "-f", "http://localhost:3001"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
             
             backend:
               image: ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
@@ -94,6 +99,11 @@ jobs:
                 - NODE_ENV=development
                 - PORT=3000
               restart: unless-stopped
+              healthcheck:
+                test: ["CMD", "curl", "-f", "http://localhost:3000"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
           INNER_EOF
 
           # Create .env file
@@ -119,5 +129,41 @@ jobs:
 
           # Verify deployment
           sudo docker ps
+          echo "Checking services health..."
+          sleep 30  # Wait for services to start
+
+          # Check if services are running
+          if sudo docker ps | grep -q "tokenminting-frontend"; then
+            echo "Frontend is running"
+          else
+            echo "Frontend failed to start"
+            exit 1
+          fi
+
+          if sudo docker ps | grep -q "tokenminting-backend"; then
+            echo "Backend is running"
+          else
+            echo "Backend failed to start"
+            exit 1
+          fi
+
+          # Check if services are responding
+          if curl -s http://localhost:3001 > /dev/null; then
+            echo "Frontend is responding"
+          else
+            echo "Frontend is not responding"
+            exit 1
+          fi
+
+          if curl -s http://localhost:3000 > /dev/null; then
+            echo "Backend is responding"
+          else
+            echo "Backend is not responding"
+            exit 1
+          fi
+
+          echo "All services are up and running!"
+          echo "Frontend URL: http://$(curl -s ifconfig.me):3001"
+          echo "Backend URL: http://$(curl -s ifconfig.me):3000"
           echo "Deployment completed successfully!"
         EOF 
