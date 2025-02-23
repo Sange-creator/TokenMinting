@@ -33,10 +33,12 @@ jobs:
 
     - name: Build and Push Docker Images
       run: |
-        cd backend
+        cd TokenMinting/backend
         sudo docker-compose build
-        sudo docker tag tokenminting-backend ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
+        sudo docker tag tokenminting_backend_1 ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
+        sudo docker tag tokenminting_frontend_1 ${{ secrets.DOCKER_USERNAME }}/tokenminting-frontend:latest
         sudo docker push ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
+        sudo docker push ${{ secrets.DOCKER_USERNAME }}/tokenminting-frontend:latest
 
     - name: Deploy to EC2
       env:
@@ -68,6 +70,18 @@ jobs:
           cat > docker-compose.yml << 'INNER_EOF'
           version: '3.8'
           services:
+            frontend:
+              image: ${{ secrets.DOCKER_USERNAME }}/tokenminting-frontend:latest
+              ports:
+                - "3001:3001"
+              environment:
+                - REACT_APP_API_URL=http://localhost:3000
+                - NODE_ENV=development
+                - WDS_SOCKET_PORT=0
+                - PORT=3001
+                - DANGEROUSLY_DISABLE_HOST_CHECK=true
+              restart: unless-stopped
+            
             backend:
               image: ${{ secrets.DOCKER_USERNAME }}/tokenminting-backend:latest
               ports:
@@ -77,6 +91,8 @@ jobs:
                 - SOLANA_NETWORK=${SOLANA_NETWORK}
                 - SOLANA_RPC_URL=${SOLANA_RPC_URL}
                 - SECRET_KEY=${SECRET_KEY}
+                - NODE_ENV=development
+                - PORT=3000
               restart: unless-stopped
           INNER_EOF
 
