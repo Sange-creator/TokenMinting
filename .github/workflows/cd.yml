@@ -10,11 +10,21 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted  # Using self-hosted runner on Ubuntu instance
+    runs-on: self-hosted
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      contents: read
+      packages: write
     
     steps:
     - uses: actions/checkout@v4
+      with:
+        clean: false  # Prevents cleaning existing files
+        
+    - name: Set up Docker permissions
+      run: |
+        sudo chown -R $USER:$USER $GITHUB_WORKSPACE
+        sudo chmod -R 777 $GITHUB_WORKSPACE
     
     - name: Deploy with Docker
       env:
@@ -27,15 +37,15 @@ jobs:
         cd backend
         
         # Stop and remove existing containers
-        docker-compose down
+        sudo docker-compose down || true
         
-        # Remove unused images and clear cache
-        docker system prune -af --volumes
+        # Remove unused images and clear cache (with error handling)
+        sudo docker system prune -af --volumes || true
         
         # Build and start new containers
-        docker-compose build --no-cache
-        docker-compose up -d
+        sudo docker-compose build --no-cache
+        sudo docker-compose up -d
         
         # Verify deployment
-        docker ps
+        sudo docker ps
         echo "Deployment completed successfully!" 
