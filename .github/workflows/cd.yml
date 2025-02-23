@@ -1,0 +1,40 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Deploy to Ubuntu Instance
+      env:
+        MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        SOLANA_NETWORK: devnet
+        SOLANA_RPC_URL: https://api.devnet.solana.com
+        SECRET_KEY: ${{ secrets.PRIVATE_KEY }}
+      run: |
+        # Stop existing containers
+        docker-compose -f backend/docker-compose.yml down
+
+        # Remove old images
+        docker system prune -f
+
+        # Build new images
+        docker-compose -f backend/docker-compose.yml build
+
+        # Start new containers
+        docker-compose -f backend/docker-compose.yml up -d
+
+        # Verify deployment
+        docker ps
+        echo "Deployment completed successfully!" 
