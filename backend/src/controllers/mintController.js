@@ -1,25 +1,61 @@
 import { createTokenMint } from '../services/createMint.js';
 import { createTokenMetadata } from '../services/createMetadata.js';
 import Token from '../models/Token.js';
+import { updateActiveMintAddress } from '../services/mintAddressManager.js';
 
 let isLocalnetSetup = false;
 
 export const createMint = async (req, res) => {
   try {
+    console.log('Starting mint creation process...');
+    
+    // Create the token mint
     const { mintAddress, explorerLink } = await createTokenMint();
-    res.json({ success: true, mintAddress, explorerLink });
+    
+    if (!mintAddress) {
+      throw new Error('Mint address was not generated');
+    }
+
+    console.log('Mint created successfully:', { mintAddress, explorerLink });
+    
+    // Update the active mint address
+    await updateActiveMintAddress(mintAddress);
+    console.log('Active mint address updated:', mintAddress);
+    
+    res.json({ 
+      success: true, 
+      mintAddress,
+      explorerLink,
+      message: 'Mint created and set as active'
+    });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Mint creation failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to create mint'
+    });
   }
 };
 
 export const mintSupply = async (req, res) => {
   try {
+    console.log('Starting to mint token supply...');
     const { mintTokens } = await import('../services/mintTokens.js');
+    
     const txSignature = await mintTokens();
-    res.json({ success: true, txSignature });
+    console.log('Token supply minted successfully:', txSignature);
+    
+    res.json({ 
+      success: true, 
+      txSignature,
+      message: 'Token supply minted successfully'
+    });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Failed to mint token supply:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to mint token supply'
+    });
   }
 };
 

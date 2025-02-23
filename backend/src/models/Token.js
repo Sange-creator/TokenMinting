@@ -49,7 +49,23 @@ const tokenSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  isActiveMint: {
+    type: Boolean,
+    default: false
   }
 });
+
+// Add a static method to update active mint
+tokenSchema.statics.setActiveMint = async function(mintAddress) {
+  // Set all mints to inactive
+  await this.updateMany({}, { isActiveMint: false });
+  // Set the new mint as active
+  await this.findOneAndUpdate(
+    { mintAddress },
+    { isActiveMint: true },
+    { new: true }
+  );
+};
 
 export default mongoose.model('Token', tokenSchema);

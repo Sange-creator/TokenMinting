@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: 
+      context: ../frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - REACT_APP_API_URL=http://localhost:3000
+      - NODE_ENV=development
+      - WDS_SOCKET_PORT=0
+      - PORT=3001
+      - DANGEROUSLY_DISABLE_HOST_CHECK=true
+    volumes:
+      - ../frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - app-network
+    depends_on:
+      - backend
+
+  backend:
+    build: .
+    container_name: backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb+srv://solvote:solvote@solvote.ft3dd.mongodb.net/?retryWrites=true&w=majority&appName=SolVote
+      - PORT=3000
+      - SOLANA_NETWORK=devnet
+      - SOLANA_RPC_URL=https://api.devnet.solana.com
+      - API_URL=http://localhost:3000
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge 

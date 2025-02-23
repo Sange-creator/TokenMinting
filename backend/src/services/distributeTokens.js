@@ -4,74 +4,59 @@ import { getKeypairFromEnvironment } from "@solana-developers/helpers";
 import { getSolanaConnection } from "../utils/solanaConnection.js";
 import Voter from '../models/Voter.js';
 import mongoose from 'mongoose';
+import { getActiveMintAddress } from './mintAddressManager.js';
 
 const TOKENS_PER_VOTER = 1;
 const DECIMALS = 2;
 
 export async function distributeTokensToAllVoters() {
     try {
+        // Get the current active mint address
+        const mintAddressStr = await getActiveMintAddress();
+        if (!mintAddressStr) {
+            throw new Error('No active mint address found');
+        }
+
+        // Create PublicKey from the mint address string
+        const tokenMint = new PublicKey(mintAddressStr);
+
         // Ensure MongoDB is connected
         if (mongoose.connection.readyState !== 1) {
             await mongoose.connect(process.env.MONGODB_URI);
         }
 
-        // 1. Get total number of voters who haven't received tokens
-        const unprocessedVoters = await Voter.find(
-            { $or: [{ tokensReceived: 0 }, { tokensReceived: { $exists: false } }] }
-        ).lean();
+        // Get eligible voters
+        const eligibleVoters = await Voter.find({
+            registrationStatus: 'completed',
+            'walletDetails.publicKey': { $exists: true },
+            tokensReceived: { $lt: 1 } // Only get voters who haven't received tokens
+        });
 
-        console.log('First voter data:', JSON.stringify(unprocessedVoters[0], null, 2));
-        
-        const voterCount = unprocessedVoters.length;
-        console.log(`Found ${voterCount} voters who haven't received tokens yet`);
-        
-        if (voterCount === 0) {
-            console.log('No new voters to distribute tokens to');
+        console.log(`Found ${eligibleVoters.length} eligible voters without tokens`);
+
+        if (eligibleVoters.length === 0) {
             return { success: true, message: 'No new voters to process' };
         }
 
-        // 2. Setup connection and accounts
         const connection = getSolanaConnection();
         const admin = getKeypairFromEnvironment("SECRET_KEY");
-        const tokenMint = new PublicKey(process.env.TOKEN_MINT_ADDRESS);
-
-        // 3. Verify admin has enough tokens
         const adminATA = await getAssociatedTokenAddress(tokenMint, admin.publicKey);
-        const mintInfo = await getMint(connection, tokenMint);
-        const adminTokenAccount = await connection.getTokenAccountBalance(adminATA);
-        const requiredTokens = voterCount * TOKENS_PER_VOTER;
 
-        if (Number(adminTokenAccount.value.amount) < requiredTokens * Math.pow(10, DECIMALS)) {
-            throw new Error(`Admin doesn't have enough tokens. Has: ${adminTokenAccount.value.amount}, Needs: ${requiredTokens * Math.pow(10, DECIMALS)}`);
+        // Verify admin has enough tokens
+        const adminBalance = (await connection.getTokenAccountBalance(adminATA)).value.amount;
+        if (Number(adminBalance) < eligibleVoters.length) {
+            throw new Error(`Insufficient tokens. Have: ${adminBalance}, Need: ${eligibleVoters.length}`);
         }
 
-        // 4. Transfer tokens to each voter
-        const results = {
-            successful: [],
-            failed: []
-        };
-
-        for (const voter of unprocessedVoters) {
+        const results = [];
+        for (const voter of eligibleVoters) {
             try {
-                // Use ATA field for voter's public key
-                if (!voter.ATA) {
-                    console.log(`Skipping voter ${voter.fullName} - No wallet address assigned`);
-                    results.failed.push({
-                        voter: voter.fullName,
-                        error: 'No wallet address assigned'
-                    });
-                    continue;
-                }
-
-                const voterPublicKey = new PublicKey(voter.ATA);
-                console.log(`Processing voter ${voter.fullName} with wallet ${voterPublicKey.toBase58()}`);
-                
-                // Get or create voter's Associated Token Account
+                const voterPublicKey = new PublicKey(voter.walletDetails.publicKey);
                 const voterATA = await getAssociatedTokenAddress(tokenMint, voterPublicKey);
+
+                // Create voter's ATA if it doesn't exist
                 const ataInfo = await connection.getAccountInfo(voterATA);
-                
                 if (!ataInfo) {
-                    console.log(`Creating ATA for voter ${voter.fullName}`);
                     await createAssociatedTokenAccount(
                         connection,
                         admin,
@@ -80,35 +65,34 @@ export async function distributeTokensToAllVoters() {
                     );
                 }
 
-                // Transfer 1 token to voter
-                const amount = TOKENS_PER_VOTER * Math.pow(10, DECIMALS);
-                
+                // Transfer exactly 1 token
                 const signature = await transfer(
                     connection,
                     admin,
                     adminATA,
                     voterATA,
                     admin,
-                    amount
+                    TOKENS_PER_VOTER
                 );
 
                 // Update voter record
-                await Voter.findByIdAndUpdate(voter._id, { 
-                    tokensReceived: TOKENS_PER_VOTER
+                await Voter.findByIdAndUpdate(voter._id, {
+                    tokensReceived: 1,
+                    hasReceivedToken: true,
+                    ATA: voterATA.toString()
                 });
 
-                results.successful.push({
-                    voter: voter.fullName,
-                    signature,
-                    address: voterPublicKey.toBase58()
+                results.push({
+                    voter: voter.walletDetails.publicKey,
+                    success: true,
+                    signature
                 });
-
-                console.log(`Successfully transferred token to ${voter.fullName} (${voterPublicKey.toBase58()})`);
 
             } catch (error) {
-                console.error(`Failed to transfer tokens to voter ${voter.fullName}:`, error);
-                results.failed.push({
-                    voter: voter.fullName,
+                console.error(`Error distributing to voter ${voter.walletDetails.publicKey}:`, error);
+                results.push({
+                    voter: voter.walletDetails.publicKey,
+                    success: false,
                     error: error.message
                 });
             }
@@ -116,14 +100,14 @@ export async function distributeTokensToAllVoters() {
 
         return {
             success: true,
-            totalVoters: voterCount,
-            successfulTransfers: results.successful.length,
-            failedTransfers: results.failed.length,
+            totalProcessed: eligibleVoters.length,
+            successful: results.filter(r => r.success).length,
+            failed: results.filter(r => !r.success).length,
             details: results
         };
 
     } catch (error) {
-        console.error('Error in distributeTokensToAllVoters:', error);
+        console.error('Distribution error:', error);
         throw error;
     }
 } 

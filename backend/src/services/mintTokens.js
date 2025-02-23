@@ -3,48 +3,56 @@ import { getKeypairFromEnvironment } from "@solana-developers/helpers";
 import { PublicKey } from "@solana/web3.js";
 import { getSolanaConnection } from "../utils/solanaConnection.js";
 import Voter from '../models/Voter.js';
+import { getActiveMintAddress } from './mintAddressManager.js';
 
-const DECIMALS = 2;
+const DECIMALS = 0;
 const MINOR_UNITS_PER_MAJOR_UNITS = Math.pow(10, DECIMALS);
 
 async function mintTotalSupply() {
   try {
+    // Get the current active mint address
+    const mintAddressStr = await getActiveMintAddress();
+    if (!mintAddressStr) {
+      throw new Error('No active mint address found');
+    }
+
+    // Create PublicKey from the mint address string
+    const tokenMint = new PublicKey(mintAddressStr);
+
     const connection = getSolanaConnection();
     const user = getKeypairFromEnvironment("SECRET_KEY");
     
-    // Use token mint from environment variable
-    if (!process.env.TOKEN_MINT_ADDRESS) {
-      throw new Error("TOKEN_MINT_ADDRESS not set in environment variables");
-    }
-    const tokenMint = new PublicKey(process.env.TOKEN_MINT_ADDRESS);
-
-    // 1. Get total number of voters (including those without ATA)
-    const totalVoters = await Voter.countDocuments({}, { allowDiskUse: true });
-    console.log(`Total voters found in database: ${totalVoters}`);
+    // Get total number of eligible voters
+    const totalVoters = await Voter.countDocuments({
+      registrationStatus: 'completed',
+      'walletDetails.publicKey': { $exists: true }
+    });
+    
+    console.log(`Total eligible voters found: ${totalVoters}`);
     
     if (totalVoters === 0) {
-      throw new Error("No voters found in the database. Please add voters first.");
+      throw new Error("No eligible voters found in the database");
     }
 
-    // 2. Check current supply
+    // Check current supply
     const mintInfo = await getMint(connection, tokenMint);
     const currentSupply = Number(mintInfo.supply);
-    const desiredSupply = totalVoters * MINOR_UNITS_PER_MAJOR_UNITS;
+    const desiredSupply = totalVoters; // Exactly one token per voter
 
     if (currentSupply >= desiredSupply) {
-      console.log(`Sufficient supply exists - Current: ${currentSupply/MINOR_UNITS_PER_MAJOR_UNITS}, Needed: ${totalVoters}`);
+      console.log(`Sufficient supply exists - Current: ${currentSupply}, Needed: ${totalVoters}`);
       return {
         success: true,
         message: "Sufficient supply already exists",
-        currentSupply: currentSupply/MINOR_UNITS_PER_MAJOR_UNITS,
+        currentSupply,
         totalVoters
       };
     }
 
-    // 3. Calculate amount to mint
+    // Calculate amount to mint
     const mintAmount = desiredSupply - currentSupply;
 
-    // 4. Get or create admin's ATA
+    // Get or create admin's ATA
     const adminATA = await getAssociatedTokenAddress(tokenMint, user.publicKey);
     const ataInfo = await connection.getAccountInfo(adminATA);
     
@@ -58,8 +66,8 @@ async function mintTotalSupply() {
       );
     }
 
-    // 5. Mint tokens to admin's ATA
-    console.log(`Minting ${mintAmount/MINOR_UNITS_PER_MAJOR_UNITS} tokens to match ${totalVoters} voters`);
+    // Mint exact number of tokens
+    console.log(`Minting ${mintAmount} tokens to match ${totalVoters} voters`);
     const txSignature = await mintTo(
       connection,
       user,
@@ -69,14 +77,14 @@ async function mintTotalSupply() {
       mintAmount
     );
 
-    // 6. Verify final supply
+    // Verify final supply
     const updatedMintInfo = await getMint(connection, tokenMint);
-    console.log(`New total supply: ${Number(updatedMintInfo.supply)/MINOR_UNITS_PER_MAJOR_UNITS}`);
+    console.log(`New total supply: ${Number(updatedMintInfo.supply)}`);
 
     return {
       success: true,
       signature: txSignature,
-      totalSupply: Number(updatedMintInfo.supply)/MINOR_UNITS_PER_MAJOR_UNITS,
+      totalSupply: Number(updatedMintInfo.supply),
       totalVoters
     };
 
@@ -86,4 +94,4 @@ async function mintTotalSupply() {
   }
 }
 
-export const mintTokens = mintTotalSupply;
+export { mintTotalSupply };

@@ -18,6 +18,9 @@ import {
   PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID 
 } from '@metaplex-foundation/mpl-token-metadata';
 import { updateVoterTokenStatus } from './voterController.js';
+import { getKeypairFromEnvironment } from "@solana-developers/helpers";
+import { getSolanaConnection } from "../utils/solanaConnection.js";
+import { getActiveMintAddress, setActiveMintAddress } from '../services/mintAddressManager.js';
 
 // Initialize connection to Solana network
 if (!process.env.SOLANA_RPC_URL) {
@@ -87,10 +90,13 @@ export async function createMintAccount() {
       throw new Error('Mint authority verification failed');
     }
 
-    // Return only the mint address string in the mintAddress field
+    // Update the active mint address in the database
+    await setActiveMintAddress(mintAddress);
+    console.log('Updated active mint address in database:', mintAddress);
+
     return {
       success: true,
-      mintAddress: mintAddress, // Ensure this is a string
+      mintAddress: mintAddress,
       mintAuthority: payer.publicKey.toString(),
       explorerUrl: `https://explorer.solana.com/address/${mintAddress}?cluster=devnet`
     };
@@ -265,20 +271,22 @@ export async function createMetadataAccount(mintAddress, metadata) {
 // Mint Token Supply
 export async function mintTokenSupply(totalSupply) {
   try {
-    console.log('Starting to mint token supply for', totalSupply, 'voters');
+    // Convert totalSupply to a number if it's a string
+    const supply = Number(totalSupply);
+    console.log('Starting to mint token supply for', supply, 'voters');
 
     // Validate total supply
-    if (!totalSupply || totalSupply <= 0) {
-      throw new Error('Total supply must be greater than 0');
+    if (!supply || supply <= 0 || isNaN(supply)) {
+      throw new Error('Total supply must be a positive number');
     }
 
-    // Get mint address from environment
-    const mintAddress = process.env.TOKEN_MINT_ADDRESS;
+    // Get active mint address from database
+    const mintAddress = await getActiveMintAddress();
     if (!mintAddress) {
-      throw new Error('TOKEN_MINT_ADDRESS is required in environment variables');
+      throw new Error('No active mint address found in database');
     }
     
-    console.log('Using mint address:', mintAddress);
+    console.log('Using active mint address:', mintAddress);
     const mintPublicKey = new PublicKey(mintAddress);
 
     // Verify mint account exists and check authority
@@ -321,7 +329,7 @@ export async function mintTokenSupply(totalSupply) {
     }
 
     // Mint tokens to admin's ATA
-    console.log(`Minting exactly ${totalSupply} tokens to admin's ATA...`);
+    console.log(`Minting exactly ${supply} tokens to admin's ATA...`);
     console.log('Using mint authority:', payer.publicKey.toString());
     
     const mintTx = await mintTo(
@@ -330,7 +338,7 @@ export async function mintTokenSupply(totalSupply) {
       mintPublicKey,      // Mint Account
       tokenAccount.address, // Destination
       payer,              // Mint Authority
-      totalSupply,        // Amount
+      supply,             // Amount (exact number of voters)
       [],                 // Additional signers
       {
         commitment: 'confirmed',
@@ -344,22 +352,24 @@ export async function mintTokenSupply(totalSupply) {
 
     // Verify the final token balance
     const finalBalance = await connection.getTokenAccountBalance(tokenAccount.address);
-    console.log('Final token balance:', finalBalance.value.uiAmount);
+    const finalAmount = Number(finalBalance.value.uiAmount);
+    console.log('Final token balance:', finalAmount);
 
-    if (finalBalance.value.uiAmount !== totalSupply) {
-      throw new Error(`Token minting verification failed. Expected ${totalSupply} tokens, got ${finalBalance.value.uiAmount}`);
+    if (finalAmount !== supply) {
+      throw new Error(`Token minting verification failed. Expected ${supply} tokens, got ${finalAmount}`);
     }
 
-    console.log('Token supply minted and verified successfully');
+    console.log(`Successfully minted ${supply} tokens`);
     console.log('Explorer URL:', `https://explorer.solana.com/tx/${mintTx}?cluster=devnet`);
 
     return {
       success: true,
       signature: mintTx,
-      totalSupply,
+      totalSupply: supply,
+      tokensCreated: finalAmount,
       adminAta: tokenAccount.address.toString(),
       explorerUrl: `https://explorer.solana.com/tx/${mintTx}?cluster=devnet`,
-      balance: finalBalance.value.uiAmount
+      balance: finalAmount
     };
 
   } catch (error) {
@@ -376,13 +386,13 @@ export async function distributeTokens(voterPublicKeys) {
   try {
     console.log('Starting token distribution to', voterPublicKeys.length, 'voters');
 
-    // Get mint address from environment
-    const mintAddress = process.env.TOKEN_MINT_ADDRESS;
+    // Get active mint address from database
+    const mintAddress = await getActiveMintAddress();
     if (!mintAddress) {
-      throw new Error('TOKEN_MINT_ADDRESS is required in environment variables');
+      throw new Error('No active mint address found in database');
     }
 
-    console.log('Using mint address:', mintAddress);
+    console.log('Using active mint address:', mintAddress);
     const mintPublicKey = new PublicKey(mintAddress);
 
     // Verify mint account exists
@@ -567,4 +577,4 @@ export async function requestAirdrop() {
     }
     throw new Error(`Failed to request airdrop: ${error.message}. Please try again or use https://solfaucet.com`);
   }
-} 
+}
