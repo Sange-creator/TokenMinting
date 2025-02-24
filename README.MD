@@ -2,7 +2,7 @@
 
 A decentralized application (dApp) for secure and transparent token distribution in democratic voting processes, built on the Solana blockchain.
 
-## 🚀 Features
+## Features
 
 - Secure token distribution system
 - Integration with Solana blockchain
@@ -10,7 +10,7 @@ A decentralized application (dApp) for secure and transparent token distribution
 - User-friendly web interface
 - Automated distribution process
 
-## 🛠 Tech Stack
+## Tech Stack
 
 - **Frontend**: React.js
 - **Backend**: Node.js
@@ -19,7 +19,7 @@ A decentralized application (dApp) for secure and transparent token distribution
 - **Containerization**: Docker
 - **CI/CD**: GitHub Actions
 
-## 🏗 Setup
+## Setup
 
 1. **Clone the repository**
    ```bash
@@ -46,7 +46,7 @@ A decentralized application (dApp) for secure and transparent token distribution
    docker-compose up --build
    ```
 
-## 🔧 Configuration
+## Configuration
 
 Configure the following environment variables:
 - `MONGODB_URI`: MongoDB connection string
@@ -54,20 +54,20 @@ Configure the following environment variables:
 - `SOLANA_RPC_URL`: Solana RPC endpoint
 - `SECRET_KEY`: Your private key
 
-## 🚦 Usage
+## Usage
 
 1. Access the frontend at `http://localhost:3001`
 2. Connect your Solana wallet
 3. Follow the interface prompts for token distribution
 
-## 🔐 Security
+## Security
 
 - Secure key management
 - Rate limiting
 - Input validation
 - Transaction verification
 
-## 📝 License
+## License
 
 MIT License - See LICENSE file for details
 
